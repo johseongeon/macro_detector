@@ -1,0 +1,14 @@
+[package]
+name = "guard-token"
+description = "신뢰도 토큰 직렬화·서명·검증"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

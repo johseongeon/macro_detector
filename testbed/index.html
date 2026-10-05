@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>모의 예매 테스트베드</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>모의 공연 예매</h1>
+      <p class="muted">데이터 수집·매크로 재현용 테스트 페이지입니다. 실제 결제는 없습니다.</p>
+    </header>
+
+    <section class="status">
+      <span>예매 오픈까지 <b id="countdown">--</b>초</span>
+      <span id="guard-status" class="muted">보안 브라우저 감지 중…</span>
+    </section>
+
+    <section>
+      <h2>좌석 선택</h2>
+      <div id="seats" class="seats" aria-label="좌석 배치도"></div>
+    </section>
+
+    <section class="form">
+      <label>예매자 이름 <input id="name" autocomplete="off"></label>
+      <button id="book" disabled>예매하기</button>
+      <p id="result" role="status"></p>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

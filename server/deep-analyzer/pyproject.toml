@@ -1,0 +1,24 @@
+[project]
+name = "guard-deep-analyzer"
+version = "0.1.0"
+description = "Stage 3: 회색 구간 세션 정밀 분석 (시퀀스 모델·교차 세션)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+model = ["torch>=2.3"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["deep_analyzer*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

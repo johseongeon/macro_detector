@@ -1,0 +1,25 @@
+[project]
+name = "guard-ml"
+version = "0.1.0"
+description = "매크로 탐지 모델 학습·내보내기·평가"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "lightgbm>=4.3",
+  "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+sequence = ["torch>=2.3"]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["guard_ml*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

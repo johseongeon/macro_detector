@@ -1,0 +1,13 @@
+[package]
+name = "guard-browser"
+description = "매크로 탐지 보안 브라우저 (Windows .exe)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+tauri.workspace = true

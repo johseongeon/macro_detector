@@ -1,0 +1,16 @@
+[package]
+name = "guard-wasm"
+description = "브라우저 페이지에 주입되는 WASM 수집·분석 엔진"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+guard-collector.workspace = true
+guard-features.workspace = true
+guard-scorer.workspace = true
+wasm-bindgen.workspace = true

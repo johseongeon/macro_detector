@@ -1,0 +1,17 @@
+{
+  "name": "@guard/web-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "예매 사이트 연동 SDK: 보안 브라우저에서 토큰을 받아 검증 서버에 확인",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

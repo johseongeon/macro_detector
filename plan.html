@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매크로 방지 브라우저 계획서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f0f0ec;
+  --text: #1c1c1a;
+  --muted: #62625c;
+  --border: #e2e2dc;
+  --accent: #2f5bd3;
+  --accent-soft: #e6ecfb;
+  --ok: #1f8a5b;
+  --ok-soft: #e3f3eb;
+  --warn: #b26b00;
+  --warn-soft: #fbf0dc;
+  --bad: #c0392b;
+  --bad-soft: #fbe6e3;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ececea; --muted: #a2a29a;
+    --border: #34342f; --accent: #7d9cf0; --accent-soft: #232c45; --ok: #5cc794; --ok-soft: #1c3329;
+    --warn: #e7a94a; --warn-soft: #3a2e1a; --bad: #ee7a6c; --bad-soft: #3d2320;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ececea; --muted: #a2a29a;
+  --border: #34342f; --accent: #7d9cf0; --accent-soft: #232c45; --ok: #5cc794; --ok-soft: #1c3329;
+  --warn: #e7a94a; --warn-soft: #3a2e1a; --bad: #ee7a6c; --bad-soft: #3d2320;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15.5px; line-height: 1.7;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 48px 16px 96px; }
+header.hero { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12.5px; color: var(--accent); letter-spacing: .04em; text-transform: uppercase; }
+h1 { font-size: clamp(26px, 4.5vw, 36px); line-height: 1.3; margin: 8px 0 12px; letter-spacing: -0.01em; }
+.lede { color: var(--muted); max-width: 720px; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: 13px; color: var(--muted); }
+nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px; }
+nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; font-size: 14px; }
+nav.toc a { color: var(--text); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+section { padding-top: 40px; }
+h2 { font-size: 22px; margin: 0 0 14px; display: flex; align-items: baseline; gap: 10px; }
+h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); }
+h3 { font-size: 16.5px; margin: 26px 0 8px; }
+p { margin: 0 0 12px; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.pillar { border-top: 3px solid var(--accent); }
+.pillar h3 { margin-top: 0; }
+.pillar ul { margin: 0; padding-left: 18px; }
+.kpi { font-family: var(--mono); font-size: 24px; font-weight: 500; color: var(--accent); line-height: 1.2; }
+.kpi-label { font-size: 13px; color: var(--muted); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-weight: 500; font-size: 13px; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+.tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.t-ok { background: var(--ok-soft); color: var(--ok); }
+.t-warn { background: var(--warn-soft); color: var(--warn); }
+.t-bad { background: var(--bad-soft); color: var(--bad); }
+.t-acc { background: var(--accent-soft); color: var(--accent); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 14.5px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+svg .box { fill: var(--surface-2); stroke: var(--border); }
+svg .box-acc { fill: var(--accent-soft); stroke: var(--accent); }
+svg .lbl { fill: var(--text); font-family: "Noto Sans KR", sans-serif; font-size: 13px; font-weight: 500; }
+svg .sub { fill: var(--muted); font-family: "Noto Sans KR", sans-serif; font-size: 11px; }
+svg .grp { fill: none; stroke: var(--muted); stroke-dasharray: 4 4; }
+svg .grp-lbl { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+svg .arrow { stroke: var(--muted); stroke-width: 1.4; fill: none; marker-end: url(#ah); }
+svg .ah { fill: var(--muted); }
+.tiers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.tier { padding: 14px 16px; background: var(--surface); border-right: 1px solid var(--border); }
+.tier:last-child { border-right: none; }
+.tier .range { font-family: var(--mono); font-size: 13px; }
+.tier b { display: block; margin: 4px 0 6px; }
+.tier p { font-size: 13.5px; color: var(--muted); margin: 0; }
+.bar { height: 6px; border-radius: 3px; margin-bottom: 10px; }
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+.phase { position: relative; margin-bottom: 18px; }
+.phase::before { content: ""; position: absolute; left: -21px; top: 7px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.phase .when { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
+.phase h3 { margin: 2px 0 6px; }
+.phase ul { margin: 0; padding-left: 18px; font-size: 14.5px; }
+.phase .exit { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
+pre.tree { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; font-family: var(--mono); font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 0; }
+pre.tree .c { color: var(--muted); }
+ul.tight { margin: 0 0 12px; padding-left: 20px; }
+ul.tight li { margin-bottom: 4px; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+@media (max-width: 720px) {
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .tiers { grid-template-columns: 1fr 1fr; }
+  .tier:nth-child(2) { border-right: none; }
+  .tier:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  nav.toc ol { columns: 1; }
+  .wrap { padding-top: 32px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Project Plan · v0.1 draft</div>
+  <h1>행동 기반 매크로 탐지 보안 브라우저</h1>
+  <p class="lede">콘서트·대중교통 예매 사이트 전용 데스크톱 브라우저(.exe). WebAssembly로 마우스·키보드 행동을 수집하고 분석해 사용자별 <b>신뢰도 점수(Trust Score)</b>를 실시간으로 산출합니다. 판단은 정확하게, 지연은 최소로 하는 것이 목표입니다.</p>
+  <div class="meta">
+    <span>작성일 2026-10-05</span>
+    <span>상태: 초안</span>
+    <span>최우선 목표: ① 오판 최소화 ② 최저 지연</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="목차">
+  <ol>
+    <li><a href="#s1">배경 및 목표</a></li>
+    <li><a href="#s2">핵심 설계 원칙</a></li>
+    <li><a href="#s3">시스템 아키텍처</a></li>
+    <li><a href="#s4">데이터 수집 (WASM Collector)</a></li>
+    <li><a href="#s5">특징(Feature) 설계</a></li>
+    <li><a href="#s6">탐지 모델 및 점수 산출</a></li>
+    <li><a href="#s7">오판 최소화 전략</a></li>
+    <li><a href="#s8">지연 시간 최소화 전략</a></li>
+    <li><a href="#s9">보안·위변조 방지</a></li>
+    <li><a href="#s10">개인정보 보호</a></li>
+    <li><a href="#s11">기술 스택</a></li>
+    <li><a href="#s12">평가 지표 및 검증</a></li>
+    <li><a href="#s13">개발 일정</a></li>
+    <li><a href="#s14">리스크 및 대응</a></li>
+    <li><a href="#s15">레포지토리 구조</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="num">01</span>배경 및 목표</h2>
+  <p>인기 공연과 명절 승차권 예매 때는 매크로(자동 클릭, 스크립트, 브라우저 자동화 도구)가 정상 사용자의 기회를 빼앗습니다. 기존 CAPTCHA는 모든 사용자에게 불편을 주고, 최근에는 AI 기반 풀이 서비스로 쉽게 우회됩니다. 이 프로젝트는 <b>사용자가 직접 실행하는 전용 브라우저</b> 안에서 행동 신호를 수집합니다. 그래서 대부분의 정상 사용자는 아무런 추가 절차 없이 통과하고, 매크로만 걸러낼 수 있습니다.</p>
+
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><div class="kpi">≤ 0.1%</div><div class="kpi-label">정상 사용자 차단율 (Hard block FPR) 목표</div></div>
+    <div class="card"><div class="kpi">≤ 0.5%</div><div class="kpi-label">정상 사용자 추가 인증 요구율 목표</div></div>
+    <div class="card"><div class="kpi">p99 &lt; 10ms</div><div class="kpi-label">'예매' 클릭 시점의 점수 판정 지연 목표</div></div>
+    <div class="card"><div class="kpi">≥ 95%</div><div class="kpi-label">알려진 매크로 유형 탐지율 (TPR) 목표</div></div>
+    <div class="card"><div class="kpi">&lt; 2%</div><div class="kpi-label">수집·분석에 따른 CPU 오버헤드</div></div>
+    <div class="card"><div class="kpi">0 bytes</div><div class="kpi-label">수집하는 실제 입력 문자 내용 (타이밍만 수집)</div></div>
+  </div>
+
+  <h3>범위</h3>
+  <ul class="tight">
+    <li><b>포함:</b> Windows용 전용 브라우저(.exe), WASM 수집·분석 모듈, 온디바이스 점수 산출, 서버 측 검증 API, 예매 사이트용 연동 SDK, 운영 대시보드</li>
+    <li><b>제외(1차):</b> macOS/모바일 지원, 결제 사기 탐지, 계정 도용 탐지(추후 확장 가능)</li>
+  </ul>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="num">02</span>핵심 설계 원칙</h2>
+  <div class="grid2">
+    <div class="card pillar">
+      <h3>① 오판 최소화 (False Positive ↓)</h3>
+      <ul>
+        <li>모델 하나만으로 차단하지 않습니다. <b>독립적인 신호가 여러 개 일치할 때만</b> 차단합니다.</li>
+        <li>판단이 애매하면 차단하지 않고 <b>단계적으로 확인</b>합니다(추가 신호 수집 → 간단한 확인 → 차단).</li>
+        <li>점수는 보정(calibration)을 거쳐 실제 확률에 가깝게 만듭니다. 임계값은 목표 FPR을 기준으로 정합니다.</li>
+        <li>접근성 사용자(키보드만 쓰는 사용자, 스크린리더 사용자), 고령자, 터치패드 사용자를 별도 집단으로 나눠 검증합니다.</li>
+      </ul>
+    </div>
+    <div class="card pillar">
+      <h3>② 최저 지연 (Latency ↓)</h3>
+      <ul>
+        <li>점수는 <b>사용자 PC에서(온디바이스)</b> 미리 계산합니다. 예매 버튼을 누를 때 따로 분석을 시작하지 않습니다.</li>
+        <li>이벤트가 들어올 때마다 특징값을 증분 갱신(O(1))합니다. 원본 시퀀스를 다시 처리하지 않습니다.</li>
+        <li>서버는 서명된 토큰만 검증합니다. 무거운 모델은 <b>회색 구간 사용자에게만</b> 비동기로 실행합니다.</li>
+        <li>수집 경로에는 메모리 할당이 없는 링버퍼를 쓰고, 분석은 메인 스레드가 아닌 Worker에서 실행합니다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout">두 목표가 충돌하면 <b>오판 최소화가 우선</b>입니다. 지연은 아키텍처로 해결할 수 있지만, 정상 사용자를 잘못 차단하면 신뢰를 되돌릴 수 없습니다. 그래서 빠른 경로(Fast path)는 "명확한 정상"과 "명확한 매크로"만 바로 판정하고, 애매한 경우는 느리더라도 정밀한 경로로 보냅니다.</div>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="num">03</span>시스템 아키텍처</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 900 430" role="img" aria-label="시스템 아키텍처 다이어그램">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <!-- client group -->
+      <rect class="grp" x="10" y="10" width="560" height="410" rx="10"/>
+      <text class="grp-lbl" x="24" y="30">CLIENT · Secure Browser (.exe)</text>
+
+      <rect class="box" x="30" y="50" width="200" height="64" rx="8"/>
+      <text class="lbl" x="44" y="76">Native Input Guard</text>
+      <text class="sub" x="44" y="96">Raw Input · 주입 플래그 감지</text>
+
+      <rect class="box" x="30" y="140" width="200" height="64" rx="8"/>
+      <text class="lbl" x="44" y="166">WebView (예매 페이지)</text>
+      <text class="sub" x="44" y="186">DOM 이벤트 · isTrusted</text>
+
+      <rect class="box" x="30" y="230" width="200" height="64" rx="8"/>
+      <text class="lbl" x="44" y="256">Environment Probe</text>
+      <text class="sub" x="44" y="276">VM · 디버거 · 자동화 흔적</text>
+
+      <rect class="box-acc" x="290" y="50" width="250" height="90" rx="8"/>
+      <text class="lbl" x="304" y="76">WASM Collector</text>
+      <text class="sub" x="304" y="96">SharedArrayBuffer 링버퍼</text>
+      <text class="sub" x="304" y="114">증분 특징 추출 (O(1)/event)</text>
+
+      <rect class="box-acc" x="290" y="170" width="250" height="90" rx="8"/>
+      <text class="lbl" x="304" y="196">WASM Scorer (Worker)</text>
+      <text class="sub" x="304" y="216">규칙 엔진 + GBDT</text>
+      <text class="sub" x="304" y="234">보정된 신뢰도 점수 0~100</text>
+
+      <rect class="box" x="290" y="290" width="250" height="90" rx="8"/>
+      <text class="lbl" x="304" y="316">Token Signer</text>
+      <text class="sub" x="304" y="336">점수 + 특징 요약 + nonce</text>
+      <text class="sub" x="304" y="354">디바이스 키로 서명 → 토큰</text>
+
+      <path class="arrow" d="M230,82 L288,90"/>
+      <path class="arrow" d="M230,172 L288,110"/>
+      <path class="arrow" d="M230,262 L288,225"/>
+      <path class="arrow" d="M415,140 L415,168"/>
+      <path class="arrow" d="M415,260 L415,288"/>
+
+      <!-- server group -->
+      <rect class="grp" x="600" y="10" width="290" height="410" rx="10"/>
+      <text class="grp-lbl" x="614" y="30">SERVER</text>
+
+      <rect class="box-acc" x="620" y="50" width="250" height="74" rx="8"/>
+      <text class="lbl" x="634" y="76">Verify API (Fast path)</text>
+      <text class="sub" x="634" y="96">서명·nonce·점수 범위 검증</text>
+      <text class="sub" x="634" y="112">목표 p99 &lt; 5ms</text>
+
+      <rect class="box" x="620" y="150" width="250" height="74" rx="8"/>
+      <text class="lbl" x="634" y="176">Deep Analyzer (Slow path)</text>
+      <text class="sub" x="634" y="196">회색 구간만 · 시퀀스 모델</text>
+      <text class="sub" x="634" y="212">교차 세션·IP·디바이스 분석</text>
+
+      <rect class="box" x="620" y="250" width="250" height="64" rx="8"/>
+      <text class="lbl" x="634" y="276">Ticketing Site SDK</text>
+      <text class="sub" x="634" y="296">허용 / 확인 / 차단 결정 수신</text>
+
+      <rect class="box" x="620" y="340" width="250" height="64" rx="8"/>
+      <text class="lbl" x="634" y="366">Label Store · Dashboard</text>
+      <text class="sub" x="634" y="386">오판 신고 · 재학습 데이터</text>
+
+      <path class="arrow" d="M540,335 L618,95"/>
+      <path class="arrow" d="M745,124 L745,148"/>
+      <path class="arrow" d="M745,224 L745,248"/>
+      <path class="arrow" d="M745,314 L745,338"/>
+    </svg>
+  </div>
+
+  <h3>동작 흐름</h3>
+  <ol class="tight">
+    <li>사용자가 전용 브라우저를 실행하고 예매 사이트에 접속합니다. 접속하는 순간부터 수집이 시작됩니다.</li>
+    <li>네이티브 계층은 OS 수준 입력(Raw Input)을, WebView 계층은 DOM 이벤트를 받아 WASM 링버퍼에 기록합니다.</li>
+    <li>WASM Collector가 이벤트마다 특징값을 증분 갱신하고, Worker의 Scorer가 주기적으로(예: 200ms마다, 혹은 중요 이벤트 직후) 점수를 갱신합니다.</li>
+    <li>'예매' 같은 보호 대상 행동이 발생하면, 이미 계산된 점수를 서명된 토큰으로 첨부해 요청합니다. <b>추가 계산은 없습니다.</b></li>
+    <li>서버는 토큰을 빠르게 검증해 허용/확인/차단을 결정합니다. 회색 구간이면 Deep Analyzer가 비동기로 정밀 분석합니다.</li>
+  </ol>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="num">04</span>데이터 수집 (WASM Collector)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>계층</th><th>수집 대상</th><th>주요 목적</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>Native (Win32)</td><td>Raw Input(WM_INPUT), Low-level hook의 <code>LLMHF_INJECTED</code> / <code>LLKHF_INJECTED</code> 플래그, 입력 장치 핸들</td><td><code>SendInput</code> 등으로 주입된 합성 입력 탐지</td><td>매우 강한 신호이며, 오판 가능성이 낮음</td></tr>
+        <tr><td>WebView</td><td><code>pointermove/down/up</code>, <code>wheel</code>, <code>keydown/up</code>(코드 종류만), <code>focus/blur</code>, <code>visibilitychange</code>, <code>isTrusted</code>, 이벤트 타임스탬프</td><td>궤적·리듬 등 행동 패턴 분석</td><td><code>getCoalescedEvents()</code>로 고해상도 궤적 확보</td></tr>
+        <tr><td>Environment</td><td>가상 머신 흔적, 디버거 연결, 원격 데스크톱 세션, 자동화 프레임워크 흔적, 다중 인스턴스 실행 여부</td><td>실행 환경의 위험도 평가</td><td>단독으로 차단하지 않고 가중치로만 반영</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>수집 파이프라인 설계</h3>
+  <ul class="tight">
+    <li><b>고정 크기 링버퍼:</b> 이벤트를 16~24바이트 고정 레코드(<code>type, t_µs, x, y, extra</code>)로 저장합니다. 런타임 메모리 할당이 없습니다.</li>
+    <li><b>SharedArrayBuffer + Atomics:</b> 메인 스레드는 쓰기만 하고, 분석 Worker가 읽습니다. 그래서 UI 스레드에 지연이 생기지 않습니다.</li>
+    <li><b>Passive 리스너:</b> 모든 리스너를 <code>{ passive: true }</code>로 등록해 스크롤과 렌더링 성능에 영향이 없게 합니다.</li>
+    <li><b>단조 증가 시계:</b> <code>performance.now()</code>와 네이티브 QPC 타임스탬프를 같이 기록해 타이밍 조작을 교차 검증합니다.</li>
+  </ul>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="num">05</span>특징(Feature) 설계</h2>
+  <p>모든 특징은 <b>슬라이딩 윈도우 기반 증분 통계</b>(Welford 평균·분산, 고정 bin 히스토그램, EWMA)로 계산합니다. 이벤트 한 건당 처리 비용은 일정합니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>분류</th><th>특징</th><th>사람 vs 매크로</th></tr></thead>
+      <tbody>
+        <tr><td>마우스 궤적</td><td>속도·가속도·저크(jerk) 분포, 곡률, 경로 효율(직선거리/실제거리), 방향 전환 횟수</td><td>사람은 종 모양 속도 곡선과 미세한 떨림이 있습니다. 매크로는 직선 경로, 일정한 속도, 또는 지나치게 매끈한 베지어 곡선을 보입니다.</td></tr>
+        <tr><td>목표 도달</td><td>Fitts' law 적합도, 오버슈트·보정 동작, 클릭 전 감속 구간, 클릭 위치의 버튼 내 분포</td><td>사람은 목표 근처에서 감속하고 보정합니다. 매크로는 정확히 중앙을 누르거나 지나치게 고른 분포를 보입니다.</td></tr>
+        <tr><td>클릭</td><td>mousedown→up 유지 시간, 클릭 간 간격의 분산·엔트로피, 이동 없는 클릭 비율</td><td>매크로는 간격 분산이 매우 작거나 인위적인 균등 난수 분포를 보입니다.</td></tr>
+        <tr><td>키보드</td><td>Dwell time(누름 유지), Flight time(키 간 이동), 다이그래프 타이밍 분포, 동시 누름(rollover) 비율</td><td>사람은 키 조합마다 고유한 리듬을 보입니다. 매크로는 일정한 리듬이거나 rollover가 없습니다.</td></tr>
+        <tr><td>타이밍</td><td>이벤트 간격 지터, 폴링 주기 정합성(125/500/1000Hz), 페이지 로드→첫 행동 반응 시간</td><td>사람이 시각 자극에 반응하는 데는 보통 150ms 이상 걸립니다. 실제 장치 폴링 주기와 맞지 않는 이벤트는 의심 대상입니다.</td></tr>
+        <tr><td>무결성</td><td>주입 플래그, <code>isTrusted=false</code> 비율, Native–DOM 이벤트 불일치, 정수 좌표만 나오는 현상</td><td>강한 신호입니다(Stage 1 규칙에 사용).</td></tr>
+        <tr><td>세션 맥락</td><td>예매 오픈 전 체류 시간, 페이지 탐색 패턴, 포커스 이탈 횟수</td><td>보조 신호로만 사용합니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="num">06</span>탐지 모델 및 점수 산출</h2>
+  <p>탐지는 3단계 계층 구조입니다. 앞 단계일수록 빠르고 확실한 경우만 판정하고, 애매한 경우는 다음 단계로 넘깁니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>위치</th><th>방법</th><th>지연</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><b>Stage 1</b> 규칙</td><td>Client WASM</td><td>결정적 규칙: 주입 입력, <code>isTrusted=false</code>, 물리적으로 불가능한 반응 시간 등</td><td>&lt; 0.1ms</td><td>명백한 매크로를 즉시 확정합니다. 규칙마다 FPR을 검증한 뒤에만 배포합니다.</td></tr>
+        <tr><td><b>Stage 2</b> GBDT</td><td>Client WASM</td><td>집계 특징 약 60~120개를 입력으로 하는 경량 Gradient Boosted Trees(트리 200개 이하)</td><td>&lt; 1ms</td><td>대부분의 사용자를 판정합니다. 결과는 보정된 확률로 출력합니다.</td></tr>
+        <tr><td><b>Stage 3</b> 시퀀스</td><td>Server</td><td>원시 궤적 기반 1D-CNN/GRU와 교차 세션 그래프 분석</td><td>수십~수백 ms (비동기)</td><td>회색 구간만 분석합니다. 사전 대기열 단계에서 실행해 사용자가 지연을 느끼지 않게 합니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>신뢰도 점수 → 조치 매핑</h3>
+  <div class="tiers">
+    <div class="tier"><div class="bar" style="background:var(--ok)"></div><span class="range">80–100</span><b>신뢰</b><p>추가 절차 없이 즉시 통과합니다. 정상 사용자 대부분이 여기에 해당해야 합니다.</p></div>
+    <div class="tier"><div class="bar" style="background:var(--accent)"></div><span class="range">50–79</span><b>관찰</b><p>통과시키되 신호를 더 수집하고, Stage 3를 비동기로 실행합니다.</p></div>
+    <div class="tier"><div class="bar" style="background:var(--warn)"></div><span class="range">20–49</span><b>확인</b><p>가벼운 상호작용 확인(드래그 등)을 요청합니다. 차단하지 않습니다.</p></div>
+    <div class="tier"><div class="bar" style="background:var(--bad)"></div><span class="range">0–19</span><b>차단</b><p>Stage 1 규칙에 걸렸거나, <b>독립 신호 2개 이상</b>이 일치할 때만 차단합니다.</p></div>
+  </div>
+  <p style="margin-top:12px;font-size:14px;color:var(--muted)">※ 구간 경계값은 예시입니다. 실제 값은 검증 데이터에서 목표 FPR을 만족하도록 정합니다(7장 참고).</p>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="num">07</span>오판 최소화 전략</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">모델 측면</h3>
+      <ul class="tight">
+        <li><b>FPR 우선 임계값:</b> ROC 전체 성능보다 "FPR 0.1%일 때의 TPR"을 핵심 지표로 삼습니다.</li>
+        <li><b>확률 보정:</b> Isotonic regression으로 점수를 실제 확률에 맞춥니다. 보정 오차(ECE)를 지속적으로 감시합니다.</li>
+        <li><b>판정 보류(Abstention):</b> Conformal prediction으로 불확실성이 큰 샘플은 판정하지 않고 다음 단계로 넘깁니다.</li>
+        <li><b>최소 증거량:</b> 이벤트 수가 기준(예: 마우스 이동 300개 이상)에 못 미치면 낮은 점수를 주지 않고 '관찰' 상태로 둡니다.</li>
+        <li><b>앙상블 합의:</b> 차단은 규칙 기반과 학습 기반처럼 서로 독립적인 탐지기가 함께 동의할 때만 실행합니다.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">운영 측면</h3>
+      <ul class="tight">
+        <li><b>집단별 검증:</b> 터치패드, 트랙볼, 펜 태블릿, 키보드 전용, 스크린리더, 고령자, 운동 장애 사용자 집단마다 FPR 상한을 따로 둡니다.</li>
+        <li><b>Shadow 모드:</b> 새 모델은 최소 2주 동안 판정만 기록하고 실제 조치는 하지 않습니다. 오판율을 확인한 뒤 적용합니다.</li>
+        <li><b>점진 배포:</b> 1% → 10% → 50% → 100%로 확대하고, 지표가 나빠지면 자동으로 롤백합니다.</li>
+        <li><b>이의 제기 경로:</b> 차단된 사용자가 즉시 대체 인증(본인 인증 등)으로 구제받을 수 있게 합니다. 이 사례는 라벨로 다시 학습에 반영합니다.</li>
+        <li><b>설명 가능성:</b> 판정마다 상위 기여 특징(SHAP)을 기록해 운영자가 오판 원인을 추적할 수 있게 합니다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn">드리프트 주의: OS 업데이트, 새 마우스 드라이버, 고주사율 모니터처럼 정상 환경이 바뀌어도 오판이 늘어날 수 있습니다. 집단별 점수 분포를 매일 감시하고, 분포가 크게 바뀌면(PSI &gt; 0.2) 알림을 보냅니다.</div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2><span class="num">08</span>지연 시간 최소화 전략</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>구간</th><th>예산</th><th>기법</th></tr></thead>
+      <tbody>
+        <tr><td>이벤트 수집 (메인 스레드)</td><td>&lt; 5µs / event</td><td>링버퍼에 쓰기만 합니다. 메모리 할당과 JS↔WASM 경계 호출을 최소화합니다(배치 처리).</td></tr>
+        <tr><td>특징 갱신 (Worker)</td><td>&lt; 50µs / event</td><td>증분 통계, SIMD(<code>wasm simd128</code>), 고정 크기 배열을 사용합니다.</td></tr>
+        <tr><td>점수 산출 (Worker)</td><td>&lt; 1ms</td><td>트리를 평탄화해 캐시 친화적인 배열로 순회합니다. 결과를 미리 계산해 캐시해 둡니다.</td></tr>
+        <tr><td>토큰 생성</td><td>&lt; 0.5ms</td><td>Ed25519 서명을 사용합니다. 점수 갱신 시점에 미리 서명해 둡니다.</td></tr>
+        <tr><td>서버 검증 (Fast path)</td><td>p99 &lt; 5ms</td><td>상태 없는 서명 검증과 nonce 확인(Redis/인메모리)을 합니다. 별도 모델 추론은 없습니다.</td></tr>
+        <tr><td><b>예매 클릭 → 판정 완료</b></td><td><b>p99 &lt; 10ms</b> (네트워크 제외)</td><td>클릭 시점에 새로 계산하지 않고 미리 준비된 토큰을 첨부합니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:12px">Stage 3 정밀 분석은 예매 오픈 전 <b>대기열 진입 단계</b>에서 미리 실행합니다. 그래야 실제 예매 순간에 지연이 생기지 않습니다. 정밀 분석이 끝나지 않았다면 Stage 2 결과로 판정하고, 결과는 나중에 반영합니다(예: 결제 단계에서 재확인).</p>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2><span class="num">09</span>보안 · 위변조 방지</h2>
+  <p>클라이언트 쪽 판정은 원칙적으로 신뢰할 수 없습니다. 그래서 <b>"클라이언트는 빠르게 판정하고, 서버는 검증한다"</b>는 원칙으로 설계합니다.</p>
+  <ul class="tight">
+    <li><b>토큰 구성:</b> 점수 + 특징 요약 벡터 + 서버 발급 nonce + 타임스탬프 + 바이너리 해시. 서버는 특징 요약으로 점수를 다시 계산해 일치하는지 표본 검사합니다.</li>
+    <li><b>키 보호:</b> 디바이스 키는 TPM/Windows CNG에 저장하고, 설치할 때 서버에 등록합니다. 세션마다 단기 키를 파생합니다.</li>
+    <li><b>바이너리 무결성:</b> 코드 서명, 실행 중 자체 해시 검사, WASM 모듈 해시 검증, 난독화(제어 흐름 평탄화)를 적용합니다.</li>
+    <li><b>디버깅·자동화 차단:</b> WebView의 원격 디버깅 포트와 DevTools를 비활성화하고, 자동화 프로토콜 연결을 막습니다.</li>
+    <li><b>모델 갱신:</b> 탐지 모델과 규칙은 서명된 패키지로 원격 배포합니다. 공격자가 우회책을 학습하기 전에 빠르게 교체할 수 있습니다.</li>
+    <li><b>서버 측 교차 신호:</b> 같은 디바이스·IP 대역의 동시 세션 수, 같은 행동 지문의 반복처럼 클라이언트가 숨길 수 없는 신호를 함께 사용합니다.</li>
+  </ul>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2><span class="num">10</span>개인정보 보호</h2>
+  <ul class="tight">
+    <li><b>입력 내용 미수집:</b> 키보드는 키 종류 범주(문자/숫자/기능키)와 타이밍만 기록합니다. 실제 입력 문자는 절대 저장하거나 전송하지 않습니다.</li>
+    <li><b>데이터 최소화:</b> 서버에는 집계된 특징 요약만 보냅니다. 원시 궤적은 회색 구간일 때만, 그리고 짧은 기간만 보관합니다(예: 7일).</li>
+    <li><b>보호 대상 페이지에서만 수집:</b> 수집은 연동된 예매 사이트 도메인에서만 동작합니다.</li>
+    <li><b>법적 준수:</b> 개인정보보호법(PIPA)에 따른 수집 목적·항목·보관 기간을 고지하고 동의를 받습니다. 행동 지문이 개인식별정보에 해당하는지 법률 검토를 받습니다.</li>
+  </ul>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2><span class="num">11</span>기술 스택</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>구성 요소</th><th>추천</th><th>대안</th><th>선택 이유</th></tr></thead>
+      <tbody>
+        <tr><td>브라우저 셸</td><td><span class="tag t-acc">Tauri 2 + WebView2</span></td><td>CEF, Electron</td><td>설치 파일이 작고(약 10MB) Rust 기반이라 네이티브 계층과 WASM 코드를 공유할 수 있습니다. 자동화 차단 제어가 더 필요하면 CEF로 전환합니다.</td></tr>
+        <tr><td>Collector / Scorer</td><td><span class="tag t-acc">Rust → wasm32</span></td><td>C++ / Emscripten</td><td>메모리 안전성, <code>simd128</code> 지원, 하나의 코드를 네이티브와 서버에서도 재사용할 수 있습니다.</td></tr>
+        <tr><td>네이티브 입력 감시</td><td><span class="tag t-acc">Rust + windows-rs</span></td><td>C++ Win32</td><td>Raw Input과 Low-level hook으로 주입 플래그를 확인합니다.</td></tr>
+        <tr><td>모델 학습</td><td><span class="tag t-acc">Python · LightGBM · PyTorch</span></td><td>XGBoost</td><td>GBDT는 Rust 추론 코드로 내보냅니다(트리 → 평탄 배열 변환기를 자체 개발).</td></tr>
+        <tr><td>서버 Verify API</td><td><span class="tag t-acc">Rust (axum)</span></td><td>Go</td><td>예측 가능한 꼬리 지연과 클라이언트 특징 코드 재사용이 장점입니다.</td></tr>
+        <tr><td>저장소</td><td><span class="tag t-acc">Redis + ClickHouse</span></td><td>PostgreSQL</td><td>nonce·세션 상태는 Redis에, 대량 이벤트 분석은 ClickHouse에 둡니다.</td></tr>
+        <tr><td>봇 데이터 생성</td><td><span class="tag t-acc">Playwright · Selenium · pyautogui · AutoHotkey</span></td><td>-</td><td>실제 매크로 도구를 재현하고, 사람 흉내 기법(베지어 곡선, 무작위 지연, GAN 궤적)까지 포함합니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <h2><span class="num">12</span>평가 지표 및 검증</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">정확도 지표</h3>
+      <ul class="tight">
+        <li><b>FPR @ 차단 임계값</b> (전체 + 집단별) — 최우선 지표</li>
+        <li>TPR @ FPR 0.1% / 0.01%</li>
+        <li>추가 인증 요구율 (정상 사용자 기준)</li>
+        <li>보정 오차 ECE, Brier score</li>
+        <li>매크로 유형별 탐지율 (단순 클릭 / 자동화 브라우저 / 사람 흉내 / 원격 조작)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">성능 지표</h3>
+      <ul class="tight">
+        <li>클릭 → 판정 지연 p50 / p99 / p99.9</li>
+        <li>이벤트당 처리 시간, Worker CPU 점유율</li>
+        <li>입력 지연 증가량 (수집 기능 켬/끔 비교, INP)</li>
+        <li>메모리 사용량, 설치 파일 크기</li>
+        <li>서버 Verify API 처리량(RPS) 및 꼬리 지연</li>
+      </ul>
+    </div>
+  </div>
+  <h3>데이터셋 계획</h3>
+  <ul class="tight">
+    <li><b>정상 데이터:</b> 베타 테스터 모집(목표 1,000명 이상, 다양한 연령·장치 포함), 모의 예매 시나리오 수행</li>
+    <li><b>매크로 데이터:</b> 레드팀이 난이도별 매크로를 제작합니다(Level 1 단순 반복 → Level 4 사람 궤적을 재생하거나 생성 모델을 쓰는 매크로).</li>
+    <li><b>분할 원칙:</b> 사용자 단위로 학습/검증/테스트를 나눠 데이터 누수를 막습니다. 테스트셋에는 학습에 쓰지 않은 매크로 도구를 반드시 포함합니다.</li>
+  </ul>
+</section>
+
+<!-- 13 -->
+<section id="s13">
+  <h2><span class="num">13</span>개발 일정 (안)</h2>
+  <div class="timeline">
+    <div class="phase">
+      <div class="when">Phase 0 · 1–2주</div>
+      <h3>기반 구축</h3>
+      <ul><li>레포 구조, CI(빌드·테스트·WASM 크기 검사), 코딩 규칙 정립</li><li>Tauri 셸 PoC: 예매 테스트 페이지 로드, WASM 모듈 주입</li></ul>
+      <div class="exit">완료 기준: .exe에서 테스트 페이지가 열리고 WASM이 이벤트를 받음</div>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 1 · 3–6주</div>
+      <h3>수집기와 데이터 확보</h3>
+      <ul><li>링버퍼 Collector, 네이티브 입력 감시, 환경 탐지 구현</li><li>모의 예매 사이트 제작, 베타 데이터 수집 시작, 레드팀 매크로 Level 1–2 제작</li></ul>
+      <div class="exit">완료 기준: 이벤트당 5µs 이하, 정상·매크로 세션 각 1만 건 이상</div>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 2 · 7–10주</div>
+      <h3>특징 추출과 모델 v1</h3>
+      <ul><li>증분 특징 추출기(Rust), Stage 1 규칙, Stage 2 GBDT 학습 및 WASM 추론기 구현</li><li>확률 보정, 집단별 평가 리포트 자동화</li></ul>
+      <div class="exit">완료 기준: 오프라인 평가에서 FPR 0.1% 기준 TPR 90% 이상</div>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 3 · 11–13주</div>
+      <h3>서버와 토큰 검증</h3>
+      <ul><li>Verify API, 서명 토큰, nonce 관리, 예매 사이트 SDK</li><li>부하 테스트(예매 오픈 순간의 트래픽 급증 시나리오)</li></ul>
+      <div class="exit">완료 기준: 서버 검증 p99 5ms 미만, 예상 최대 RPS의 3배 처리</div>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 4 · 14–16주</div>
+      <h3>Stage 3 · 보안 강화</h3>
+      <ul><li>시퀀스 모델, 교차 세션 분석, 대기열 단계에서 사전 분석</li><li>바이너리 무결성 검사, 난독화, 레드팀 Level 3–4 공격 대응</li></ul>
+      <div class="exit">완료 기준: 처음 보는 매크로 도구에 대한 탐지율 80% 이상</div>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 5 · 17–20주</div>
+      <h3>Shadow 운영 · 파일럿</h3>
+      <ul><li>파트너 사이트에서 Shadow 모드 운영, 오판 사례 분석, 임계값 조정</li><li>대시보드, 이의 제기 처리 흐름, 점진 배포 체계</li></ul>
+      <div class="exit">완료 기준: 실제 트래픽에서 차단 FPR 0.1% 이하 확인 후 정식 적용</div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 -->
+<section id="s14">
+  <h2><span class="num">14</span>리스크 및 대응</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>리스크</th><th>영향</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr><td>정상 사용자 오판 (특히 접근성 사용자)</td><td><span class="tag t-bad">높음</span></td><td>집단별 FPR 상한, 단계적 조치, 즉시 구제 경로, Shadow 검증</td></tr>
+        <tr><td>사람 궤적을 학습한 생성형 매크로</td><td><span class="tag t-bad">높음</span></td><td>네이티브 주입 탐지(행동과 무관한 신호), 교차 세션 지문, 빠른 모델 교체</td></tr>
+        <tr><td>하드웨어 매크로 (USB HID 에뮬레이터 등)</td><td><span class="tag t-warn">중간</span></td><td>주입 플래그로는 잡히지 않습니다. 장치 식별자, 폴링 특성, 행동 모델로 대응하고, 서버 측 계정·결제 제한을 함께 적용합니다.</td></tr>
+        <tr><td>클라이언트 리버스 엔지니어링·위조</td><td><span class="tag t-warn">중간</span></td><td>서버 재검증, 서명 키 보호, 난독화, 자주 바뀌는 모델</td></tr>
+        <tr><td>예매 오픈 순간의 트래픽 급증</td><td><span class="tag t-warn">중간</span></td><td>상태 없는 검증 API, 수평 확장, 사전 토큰 발급</td></tr>
+        <tr><td>백신 프로그램의 오탐 (입력 훅 사용)</td><td><span class="tag t-warn">중간</span></td><td>EV 코드 서명, 주요 백신 업체에 사전 등록, 훅 대신 Raw Input 우선 사용</td></tr>
+        <tr><td>개인정보 규제</td><td><span class="tag t-acc">낮음~중간</span></td><td>내용 미수집, 최소 보관, 법률 검토</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 15 -->
+<section id="s15">
+  <h2><span class="num">15</span>레포지토리 구조 (안)</h2>
+<pre class="tree">swe_project/
+├── apps/
+│   └── browser/            <span class="c"># Tauri 셸 (.exe), 네이티브 입력 감시, 환경 탐지</span>
+├── crates/
+│   ├── collector/          <span class="c"># 링버퍼, 이벤트 레코드 정의 (wasm32 + native 공용)</span>
+│   ├── features/           <span class="c"># 증분 특징 추출기</span>
+│   ├── scorer/             <span class="c"># Stage 1 규칙 + Stage 2 GBDT 추론</span>
+│   └── token/              <span class="c"># 토큰 직렬화·서명·검증</span>
+├── server/
+│   ├── verify-api/         <span class="c"># Fast path 검증 (axum)</span>
+│   └── deep-analyzer/      <span class="c"># Stage 3 시퀀스 모델 서빙</span>
+├── sdk/
+│   └── web/                <span class="c"># 예매 사이트 연동 JS SDK</span>
+├── ml/
+│   ├── datasets/           <span class="c"># 데이터 수집·전처리 스크립트</span>
+│   ├── training/           <span class="c"># LightGBM / PyTorch 학습</span>
+│   ├── export/             <span class="c"># 모델 → Rust 평탄 배열 변환기</span>
+│   └── eval/               <span class="c"># 집단별 FPR·보정 리포트</span>
+├── redteam/                <span class="c"># 난이도별 매크로 재현 도구 (내부 전용)</span>
+├── testbed/                <span class="c"># 모의 예매 사이트</span>
+├── bench/                  <span class="c"># 지연 시간 벤치마크</span>
+└── docs/</pre>
+</section>
+
+<footer>
+  본 문서는 초안이며, Phase 1 데이터 수집 결과에 따라 특징 설계, 임계값, 일정이 조정될 수 있습니다.
+</footer>
+
+</div>
+</body>
+</html>

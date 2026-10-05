@@ -1,0 +1,10 @@
+[package]
+name = "guard-features"
+description = "이벤트 스트림에서 행동 특징을 증분 추출"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+guard-collector.workspace = true

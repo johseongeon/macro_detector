@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# WASM build output
+pkg/
+
+# 수집 데이터·모델 산출물은 레포에 올리지 않는다
+ml/datasets/raw/
+ml/datasets/processed/
+ml/artifacts/
+
+# Tauri
+apps/browser/src-tauri/gen/
+
+.DS_Store
+.idea/
+.vscode/
