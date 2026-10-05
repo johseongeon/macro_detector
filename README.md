@@ -59,6 +59,28 @@ cd ml && pip install -e ".[dev]" && pytest
 python3 -m http.server 5173 --directory testbed
 ```
 
+## Windows 실행 파일 빌드
+
+결과물은 `dist/`에 생성됩니다(커밋되지 않음).
+
+- `guard-browser.exe` — 단독 실행 파일 (WebView2 런타임 필요, Windows 11 기본 포함)
+- `Guard Browser_<버전>_x64-setup.exe` — NSIS 설치 파일 (WebView2가 없으면 설치 중 자동 설치)
+
+**WSL에서 빌드** (Windows 쪽에 Rust, MSVC 빌드 도구, tauri-cli 필요)
+
+```bash
+scripts/build-windows.sh                # exe + 설치 파일
+scripts/build-windows.sh --no-installer # exe만
+```
+
+**Windows에서 직접 빌드**
+
+```powershell
+cargo install tauri-cli --version "^2" --locked   # 최초 1회
+cd apps\browser\src-tauri
+cargo tauri build --bundles nsis
+```
+
 ## 언어 간 계약
 
 다음 값은 여러 언어에 중복 정의되어 있으므로 함께 수정해야 합니다.
