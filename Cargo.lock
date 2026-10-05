@@ -1465,6 +1465,7 @@ dependencies = [
 name = "guard-browser"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "tauri",
  "tauri-build",
 ]
@@ -1526,7 +1527,6 @@ dependencies = [
  "guard-collector",
  "guard-features",
  "guard-scorer",
- "wasm-bindgen",
 ]
 
 [[package]]

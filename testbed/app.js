@@ -59,3 +59,67 @@ bookBtn.addEventListener("click", async () => {
     resultEl.textContent = `토큰 발급 실패: ${err.message}`;
   }
 });
+
+// ---- 개발용 신뢰도 패널 ----
+// __GUARD__.debug()는 개발용 호스트(localhost)에서만 제공된다.
+
+const TIER_LABELS = { trusted: "신뢰", observe: "관찰", challenge: "확인", block: "차단" };
+const SHOWN_FEATURES = {
+  event_count: "이벤트 수",
+  move_count: "마우스 이동",
+  speed_mean: "평균 속도 (px/ms)",
+  speed_std: "속도 표준편차",
+  click_interval_mean_ms: "클릭 간격 평균 (ms)",
+  key_dwell_mean_ms: "키 누름 평균 (ms)",
+  untrusted_ratio: "비신뢰 이벤트 비율",
+  injected_count: "주입 입력 수",
+};
+
+const debugEl = document.getElementById("debug");
+const scoreEl = document.getElementById("score");
+const tierEl = document.getElementById("tier");
+const meterEl = document.getElementById("meter-fill");
+const featuresEl = document.getElementById("features");
+
+const featureCells = {};
+for (const [key, label] of Object.entries(SHOWN_FEATURES)) {
+  const row = document.createElement("div");
+  const dt = document.createElement("dt");
+  const dd = document.createElement("dd");
+  dt.textContent = label;
+  row.append(dt, dd);
+  featuresEl.append(row);
+  featureCells[key] = dd;
+}
+
+function renderDebug() {
+  const d = window.__GUARD__?.debug?.();
+  if (!d) return;
+  debugEl.hidden = false;
+  scoreEl.textContent = d.score;
+  tierEl.dataset.tier = d.tier;
+  tierEl.textContent = TIER_LABELS[d.tier] ?? d.tier;
+  meterEl.style.width = `${d.score}%`;
+  for (const [key, cell] of Object.entries(featureCells)) {
+    const v = d.features[key];
+    cell.textContent = Number.isInteger(v) ? v : v.toFixed(3);
+  }
+}
+setInterval(renderDebug, 250);
+
+// 스크립트로 직선 이동 + 클릭을 흉내 낸다. dispatchEvent로 만든 이벤트는 isTrusted=false다.
+document.getElementById("simulate").addEventListener("click", () => {
+  const target = document.querySelector(".seat:not(:disabled)");
+  const rect = target.getBoundingClientRect();
+  const endX = rect.left + rect.width / 2;
+  const endY = rect.top + rect.height / 2;
+  const steps = 300;
+  for (let i = 0; i <= steps; i++) {
+    const init = { bubbles: true, clientX: (endX * i) / steps, clientY: (endY * i) / steps };
+    document.body.dispatchEvent(new PointerEvent("pointermove", init));
+  }
+  const at = { bubbles: true, clientX: endX, clientY: endY };
+  target.dispatchEvent(new PointerEvent("pointerdown", at));
+  target.dispatchEvent(new PointerEvent("pointerup", at));
+  target.click();
+});

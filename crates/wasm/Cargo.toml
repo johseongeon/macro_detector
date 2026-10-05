@@ -13,4 +13,3 @@ crate-type = ["cdylib", "rlib"]
 guard-collector.workspace = true
 guard-features.workspace = true
 guard-scorer.workspace = true
-wasm-bindgen.workspace = true

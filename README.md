@@ -14,7 +14,7 @@ WebAssembly로 마우스·키보드 행동을 수집하고 분석해 사용자�
 | `crates/features/` | 증분 특징 추출기 (이벤트당 O(1)) | Rust |
 | `crates/scorer/` | Stage 1 규칙 + Stage 2 GBDT 추론 + 확률 보정 | Rust |
 | `crates/token/` | 신뢰도 토큰 서명·검증 (Ed25519) | Rust |
-| `crates/wasm/` | 페이지에 주입되는 WASM 엔진 (wasm-bindgen) | Rust |
+| `crates/wasm/` | 페이지에 주입되는 WASM 엔진 (import 없는 C ABI) | Rust |
 | `server/verify-api/` | Fast path 토큰 검증 API (axum) | Rust |
 | `server/deep-analyzer/` | Stage 3 정밀 분석 서버 (FastAPI) | Python |
 | `sdk/web/` | 예매 사이트 연동 SDK | TypeScript |
@@ -37,8 +37,9 @@ WebAssembly로 마우스·키보드 행동을 수집하고 분석해 사용자�
 # Rust: 테스트 (브라우저 셸 제외)
 cargo test
 
-# WASM 엔진 빌드
-wasm-pack build crates/wasm --target web --release
+# WASM 엔진 빌드 + 수집기 통합 테스트 (브라우저 셸은 build.rs가 자동으로 빌드해 내장)
+cargo build -p guard-wasm --target wasm32-unknown-unknown --release
+node --test apps/browser/bootstrap/collector-bootstrap.test.mjs
 
 # 지연 벤치마크
 cargo bench -p guard-bench
@@ -85,7 +86,8 @@ cargo tauri build --bundles nsis
 
 다음 값은 여러 언어에 중복 정의되어 있으므로 함께 수정해야 합니다.
 
-- 특징 순서: `crates/features/src/lib.rs` `FEATURE_NAMES` ↔ `ml/guard_ml/feature_schema.py` (테스트로 일치 검사)
+- 특징 순서: `crates/features/src/lib.rs` `FEATURE_NAMES` ↔ `ml/guard_ml/feature_schema.py` ↔ `collector-bootstrap.js` (테스트로 일치 검사)
+- WASM 함수(`guard_*`): `crates/wasm/src/lib.rs` ↔ `collector-bootstrap.js`
 - 이벤트 종류·플래그·키 범주: `crates/collector/src/lib.rs` ↔ `apps/browser/bootstrap/collector-bootstrap.js`
 - 리프 표식 `LEAF`: `crates/scorer/src/gbdt.rs` ↔ `ml/guard_ml/export/flat_forest.py`
 - 조치 단계 값: `guard_scorer::Tier` ↔ `crates/wasm`, `server/verify-api`

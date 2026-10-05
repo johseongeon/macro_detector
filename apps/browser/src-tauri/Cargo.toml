@@ -10,4 +10,5 @@ publish.workspace = true
 tauri-build.workspace = true
 
 [dependencies]
+base64.workspace = true
 tauri.workspace = true

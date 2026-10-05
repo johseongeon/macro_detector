@@ -25,12 +25,19 @@ jobs:
           size=$(stat -c%s target/wasm32-unknown-unknown/release/guard_wasm.wasm)
           echo "guard_wasm.wasm: $size bytes"
           test "$size" -lt 307200
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Bootstrap + WASM integration test
+        run: node --test apps/browser/bootstrap/collector-bootstrap.test.mjs
 
   browser:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown  # build.rs가 WASM 엔진을 빌드한다
       - uses: Swatinem/rust-cache@v2
       - run: cargo check -p guard-browser
 

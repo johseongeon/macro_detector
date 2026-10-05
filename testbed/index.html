@@ -18,6 +18,20 @@
       <span id="guard-status" class="muted">보안 브라우저 감지 중…</span>
     </section>
 
+    <section id="debug" class="debug" hidden>
+      <div class="debug-head">
+        <h2>신뢰도 (개발용)</h2>
+        <button id="simulate" type="button" class="secondary">매크로 시뮬레이션</button>
+      </div>
+      <div class="score-row">
+        <span id="score" class="score">--</span>
+        <span id="tier" class="tier">--</span>
+      </div>
+      <div class="meter"><div id="meter-fill"></div></div>
+      <dl id="features" class="features"></dl>
+      <p class="muted small">시뮬레이션은 스크립트로 만든(<code>isTrusted=false</code>) 마우스 이벤트를 주입합니다. 새로 고침하면 초기화됩니다.</p>
+    </section>
+
     <section>
       <h2>좌석 선택</h2>
       <div id="seats" class="seats" aria-label="좌석 배치도"></div>

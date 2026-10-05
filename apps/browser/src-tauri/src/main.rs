@@ -3,8 +3,22 @@
 
 mod input_guard;
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+
 /// 모든 페이지 로드 직후, 페이지 스크립트보다 먼저 실행되는 수집기 부트스트랩.
 const COLLECTOR_BOOTSTRAP: &str = include_str!("../../bootstrap/collector-bootstrap.js");
+
+/// `build.rs`가 빌드한 WASM 엔진 (crates/wasm).
+const ENGINE_WASM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/guard_engine.wasm"));
+
+/// WASM 바이트를 base64로 넣고 전체를 IIFE로 감싸, 페이지 전역 스코프에 아무것도 남기지 않는다.
+fn collector_script() -> String {
+    format!(
+        "(() => {{\nconst GUARD_ENGINE_WASM_B64 = \"{}\";\n{}\n}})();",
+        STANDARD.encode(ENGINE_WASM),
+        COLLECTOR_BOOTSTRAP
+    )
+}
 
 fn main() {
     tauri::Builder::default()
@@ -20,7 +34,7 @@ fn main() {
             )
             .title("Guard Browser")
             .inner_size(1280.0, 800.0)
-            .initialization_script(COLLECTOR_BOOTSTRAP)
+            .initialization_script(collector_script())
             .build()?;
             Ok(())
         })
