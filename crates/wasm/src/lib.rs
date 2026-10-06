@@ -60,6 +60,11 @@ impl Engine {
         self.verdict
     }
 
+    /// 네이티브 입력 감시가 보고한 주입 입력 수. 다음 `tick()`에 반영된다.
+    pub fn record_native_injected(&mut self, count: u64) {
+        self.extractor.record_native_injected(count);
+    }
+
     pub fn verdict(&self) -> Verdict {
         self.verdict
     }
@@ -119,6 +124,18 @@ pub extern "C" fn guard_tier() -> u32 {
     with_engine(|e| e.verdict().tier as u32)
 }
 
+/// 걸린 Stage 1 규칙 (0=없음, 1=주입 입력, 2=비신뢰 이벤트).
+#[no_mangle]
+pub extern "C" fn guard_rule() -> u32 {
+    with_engine(|e| e.verdict().hard_rule.map_or(0, |r| r as u32))
+}
+
+/// 브라우저 셸의 네이티브 입력 감시가 보고한 주입 입력 수를 더한다.
+#[no_mangle]
+pub extern "C" fn guard_native_injected(count: u32) {
+    with_engine(|e| e.record_native_injected(count as u64));
+}
+
 #[no_mangle]
 pub extern "C" fn guard_sufficient_evidence() -> u32 {
     with_engine(|e| e.has_sufficient_evidence() as u32)
@@ -147,7 +164,7 @@ mod tests {
     use guard_features::idx;
 
     #[test]
-    fn injected_input_blocks_after_tick() {
+    fn injected_input_challenges_after_tick() {
         let mut e = Engine::new();
         e.push(
             EventKind::PointerMove as u8,
@@ -158,7 +175,16 @@ mod tests {
             0,
         );
         assert_eq!(e.verdict().tier, Tier::Observe);
-        assert_eq!(e.tick().tier, Tier::Block);
+        assert_eq!(e.tick().tier, Tier::Challenge);
+    }
+
+    #[test]
+    fn native_report_challenges_after_tick() {
+        let mut e = Engine::new();
+        e.record_native_injected(3);
+        let v = e.tick();
+        assert_eq!(v.tier, Tier::Challenge);
+        assert_eq!(e.features().0[idx::INJECTED_COUNT], 3.0);
     }
 
     #[test]
@@ -189,5 +215,16 @@ mod tests {
         assert_eq!(guard_feature(idx::UNTRUSTED_RATIO as u32), 1.0);
         assert!(guard_feature(guard_feature_count()).is_nan());
         assert_eq!(guard_sufficient_evidence(), 0);
+        assert_eq!(guard_rule(), 2);
+    }
+
+    #[test]
+    fn c_abi_native_injected() {
+        assert_eq!(guard_rule(), 0);
+        guard_native_injected(2);
+        guard_tick();
+        assert_eq!(guard_tier(), Tier::Challenge as u32);
+        assert_eq!(guard_rule(), 1);
+        assert_eq!(guard_feature(idx::INJECTED_COUNT as u32), 2.0);
     }
 }

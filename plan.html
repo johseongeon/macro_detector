@@ -291,7 +291,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
     <table>
       <thead><tr><th>계층</th><th>수집 대상</th><th>주요 목적</th><th>비고</th></tr></thead>
       <tbody>
-        <tr><td>Native (Win32)</td><td>Raw Input(WM_INPUT), Low-level hook의 <code>LLMHF_INJECTED</code> / <code>LLKHF_INJECTED</code> 플래그, 입력 장치 핸들</td><td><code>SendInput</code> 등으로 주입된 합성 입력 탐지</td><td>매우 강한 신호이며, 오판 가능성이 낮음</td></tr>
+        <tr><td>Native (Win32)</td><td>Raw Input(WM_INPUT), Low-level hook의 <code>LLMHF_INJECTED</code> / <code>LLKHF_INJECTED</code> 플래그, 입력 장치 핸들</td><td><code>SendInput</code> 등으로 주입된 합성 입력 탐지</td><td>강한 신호. 단, 화상 키보드·시선 추적기 등 보조 기기도 입력을 주입하므로 단독으로는 &#39;확인&#39;까지만 적용</td></tr>
         <tr><td>WebView</td><td><code>pointermove/down/up</code>, <code>wheel</code>, <code>keydown/up</code>(코드 종류만), <code>focus/blur</code>, <code>visibilitychange</code>, <code>isTrusted</code>, 이벤트 타임스탬프</td><td>궤적·리듬 등 행동 패턴 분석</td><td><code>getCoalescedEvents()</code>로 고해상도 궤적 확보</td></tr>
         <tr><td>Environment</td><td>가상 머신 흔적, 디버거 연결, 원격 데스크톱 세션, 자동화 프레임워크 흔적, 다중 인스턴스 실행 여부</td><td>실행 환경의 위험도 평가</td><td>단독으로 차단하지 않고 가중치로만 반영</td></tr>
       </tbody>
@@ -334,7 +334,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
     <table>
       <thead><tr><th>단계</th><th>위치</th><th>방법</th><th>지연</th><th>역할</th></tr></thead>
       <tbody>
-        <tr><td><b>Stage 1</b> 규칙</td><td>Client WASM</td><td>결정적 규칙: 주입 입력, <code>isTrusted=false</code>, 물리적으로 불가능한 반응 시간 등</td><td>&lt; 0.1ms</td><td>명백한 매크로를 즉시 확정합니다. 규칙마다 FPR을 검증한 뒤에만 배포합니다.</td></tr>
+        <tr><td><b>Stage 1</b> 규칙</td><td>Client WASM</td><td>결정적 규칙: 주입 입력, <code>isTrusted=false</code>, 물리적으로 불가능한 반응 시간 등</td><td>&lt; 0.1ms</td><td>명백한 매크로를 즉시 판정합니다. 정상 사용자가 걸릴 수 있는 규칙(주입 입력 등)은 차단 대신 &#39;확인&#39;으로 보냅니다. 규칙마다 FPR을 검증한 뒤에만 배포합니다.</td></tr>
         <tr><td><b>Stage 2</b> GBDT</td><td>Client WASM</td><td>집계 특징 약 60~120개를 입력으로 하는 경량 Gradient Boosted Trees(트리 200개 이하)</td><td>&lt; 1ms</td><td>대부분의 사용자를 판정합니다. 결과는 보정된 확률로 출력합니다.</td></tr>
         <tr><td><b>Stage 3</b> 시퀀스</td><td>Server</td><td>원시 궤적 기반 1D-CNN/GRU와 교차 세션 그래프 분석</td><td>수십~수백 ms (비동기)</td><td>회색 구간만 분석합니다. 사전 대기열 단계에서 실행해 사용자가 지연을 느끼지 않게 합니다.</td></tr>
       </tbody>
@@ -346,7 +346,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
     <div class="tier"><div class="bar" style="background:var(--ok)"></div><span class="range">80–100</span><b>신뢰</b><p>추가 절차 없이 즉시 통과합니다. 정상 사용자 대부분이 여기에 해당해야 합니다.</p></div>
     <div class="tier"><div class="bar" style="background:var(--accent)"></div><span class="range">50–79</span><b>관찰</b><p>통과시키되 신호를 더 수집하고, Stage 3를 비동기로 실행합니다.</p></div>
     <div class="tier"><div class="bar" style="background:var(--warn)"></div><span class="range">20–49</span><b>확인</b><p>가벼운 상호작용 확인(드래그 등)을 요청합니다. 차단하지 않습니다.</p></div>
-    <div class="tier"><div class="bar" style="background:var(--bad)"></div><span class="range">0–19</span><b>차단</b><p>Stage 1 규칙에 걸렸거나, <b>독립 신호 2개 이상</b>이 일치할 때만 차단합니다.</p></div>
+    <div class="tier"><div class="bar" style="background:var(--bad)"></div><span class="range">0–19</span><b>차단</b><p>차단 등급 Stage 1 규칙에 걸렸거나, <b>독립 신호 2개 이상</b>이 일치할 때만 차단합니다.</p></div>
   </div>
   <p style="margin-top:12px;font-size:14px;color:var(--muted)">※ 구간 경계값은 예시입니다. 실제 값은 검증 데이터에서 목표 FPR을 만족하도록 정합니다(7장 참고).</p>
 </section>

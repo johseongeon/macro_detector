@@ -3,13 +3,19 @@
 
 mod input_guard;
 
+use std::time::Duration;
+
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use tauri::Manager;
 
 /// 모든 페이지 로드 직후, 페이지 스크립트보다 먼저 실행되는 수집기 부트스트랩.
 const COLLECTOR_BOOTSTRAP: &str = include_str!("../../bootstrap/collector-bootstrap.js");
 
 /// `build.rs`가 빌드한 WASM 엔진 (crates/wasm).
 const ENGINE_WASM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/guard_engine.wasm"));
+
+/// 네이티브 감시 결과를 페이지 수집기에 전달하는 주기.
+const NATIVE_REPORT_INTERVAL: Duration = Duration::from_millis(200);
 
 /// WASM 바이트를 base64로 넣고 전체를 IIFE로 감싸, 페이지 전역 스코프에 아무것도 남기지 않는다.
 fn collector_script() -> String {
@@ -36,6 +42,22 @@ fn main() {
             .inner_size(1280.0, 800.0)
             .initialization_script(collector_script())
             .build()?;
+
+            // 네이티브 입력 감시 결과를 주기적으로 페이지 수집기(collector-bootstrap.js)에 전달한다.
+            // 수집기가 없는 페이지(허용 목록 밖)에서는 호출이 무시된다.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(NATIVE_REPORT_INTERVAL);
+                // 수집기는 100만을 넘는 보고를 무시하므로 상한을 맞춘다.
+                let injected = input_guard::take_injected().min(1_000_000);
+                if injected == 0 {
+                    continue;
+                }
+                if let Some(window) = handle.get_webview_window("main") {
+                    let script = format!("window.__GUARD__?.reportNativeInjected?.({injected});");
+                    let _ = window.eval(&script);
+                }
+            });
             Ok(())
         })
         .run(tauri::generate_context!())

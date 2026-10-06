@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 pub use calibration::Calibrator;
 pub use gbdt::FlatForest;
-pub use rules::HardRule;
+pub use rules::{HardRule, RuleAction};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -93,18 +93,26 @@ impl Scorer {
     }
 
     pub fn score(&self, fv: &FeatureVector, sufficient_evidence: bool) -> Verdict {
-        if let Some(rule) = rules::check(fv) {
-            return Verdict {
-                score: 0,
-                tier: Tier::Block,
-                hard_rule: Some(rule),
-            };
-        }
-
         let p_bot = self
             .calibrator
             .apply(sigmoid(self.forest.predict_margin(fv.as_slice())));
         let score = ((1.0 - p_bot) * 100.0).round().clamp(0.0, 100.0) as u8;
+
+        if let Some(rule) = rules::check(fv) {
+            return match rule.action() {
+                RuleAction::Block => Verdict {
+                    score: 0,
+                    tier: Tier::Block,
+                    hard_rule: Some(rule),
+                },
+                // 점수는 '확인' 구간 안으로 낮추되, 모델이 더 낮게 봤어도 차단하지는 않는다.
+                RuleAction::Challenge => Verdict {
+                    score: score.min(self.thresholds.observe.saturating_sub(1)),
+                    tier: Tier::Challenge,
+                    hard_rule: Some(rule),
+                },
+            };
+        }
 
         let floor = if sufficient_evidence {
             Tier::Challenge
@@ -149,10 +157,39 @@ mod tests {
     }
 
     #[test]
-    fn hard_rule_blocks() {
-        let v = Scorer::default().score(&fv_with(idx::INJECTED_COUNT, 3.0), true);
+    fn untrusted_events_block() {
+        let mut fv = fv_with(idx::EVENT_COUNT, 100.0);
+        fv.0[idx::UNTRUSTED_RATIO] = 0.9;
+        let v = Scorer::default().score(&fv, true);
         assert_eq!(v.tier, Tier::Block);
+        assert_eq!(v.score, 0);
+        assert_eq!(v.hard_rule, Some(HardRule::UntrustedEvents));
+    }
+
+    #[test]
+    fn injected_input_only_challenges() {
+        let v = Scorer::default().score(&fv_with(idx::INJECTED_COUNT, 3.0), true);
+        assert_eq!(v.tier, Tier::Challenge);
+        assert_eq!(v.score, 49);
         assert_eq!(v.hard_rule, Some(HardRule::InjectedInput));
+
+        // 모델이 매크로로 강하게 의심해도 주입 입력 단독으로는 차단하지 않는다.
+        let s = Scorer::new(
+            FlatForest::constant(20.0),
+            Calibrator::identity(),
+            Thresholds::default(),
+        );
+        let v = s.score(&fv_with(idx::INJECTED_COUNT, 3.0), true);
+        assert_eq!(v.tier, Tier::Challenge);
+        assert_eq!(v.score, 0);
+    }
+
+    #[test]
+    fn untrusted_rule_wins_over_injected() {
+        let mut fv = fv_with(idx::EVENT_COUNT, 100.0);
+        fv.0[idx::UNTRUSTED_RATIO] = 0.9;
+        fv.0[idx::INJECTED_COUNT] = 5.0;
+        assert_eq!(Scorer::default().score(&fv, true).tier, Tier::Block);
     }
 
     #[test]

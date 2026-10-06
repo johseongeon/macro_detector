@@ -74,7 +74,25 @@ test("untrusted (script-generated) events trigger the hard rule", async () => {
 
   const d = page.guard().debug();
   assert.equal(d.tier, "block");
+  assert.equal(d.rule, "untrusted_events");
   assert.equal(d.score, 0);
+});
+
+test("native injected reports challenge but never block", async () => {
+  const page = loadPage();
+  page.guard().reportNativeInjected(2); // 엔진 로드 전 보고도 보존
+  await ready(page);
+  page.guard().reportNativeInjected(3);
+  page.guard().reportNativeInjected(-1); // 잘못된 값은 무시
+  page.guard().reportNativeInjected(1.5);
+  page.move(10);
+  page.tick();
+
+  const d = page.guard().debug();
+  assert.equal(d.features.injected_count, 5);
+  assert.equal(d.tier, "challenge");
+  assert.equal(d.rule, "injected_input");
+  assert.equal(d.score, 49);
 });
 
 test("does nothing on hosts outside the allowlist", () => {

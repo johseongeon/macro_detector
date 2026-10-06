@@ -133,6 +133,12 @@ impl FeatureExtractor {
         self.speed.count() + self.last_move.is_some() as u64
     }
 
+    /// 네이티브 입력 감시가 보고한 주입 입력 수를 더한다.
+    /// 네이티브 계층은 DOM 이벤트와 1:1로 대응되지 않으므로 개수만 합산한다.
+    pub fn record_native_injected(&mut self, count: u64) {
+        self.injected_count = self.injected_count.saturating_add(count);
+    }
+
     pub fn has_sufficient_evidence(&self) -> bool {
         self.move_count() >= MIN_MOVES_FOR_VERDICT
     }
@@ -219,5 +225,15 @@ mod tests {
         assert!((v.0[idx::UNTRUSTED_RATIO] - 1.0 / 3.0).abs() < 1e-6);
         assert_eq!(v.0[idx::INJECTED_COUNT], 1.0);
         assert!(!fx.has_sufficient_evidence());
+    }
+
+    #[test]
+    fn adds_native_injected_reports() {
+        let mut fx = FeatureExtractor::new();
+        fx.record_native_injected(4);
+        fx.record_native_injected(u64::MAX);
+        let v = fx.snapshot();
+        assert_eq!(v.0[idx::INJECTED_COUNT], u64::MAX as f32);
+        assert_eq!(v.0[idx::EVENT_COUNT], 0.0);
     }
 }

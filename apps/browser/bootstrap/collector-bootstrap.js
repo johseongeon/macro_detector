@@ -19,6 +19,7 @@
   const FLAG_COALESCED = 1 << 2;
   const KEY = { other: 0, letter: 1, digit: 2, modifier: 3, navigation: 4, function: 5, whitespace: 6 };
   const TIER_NAMES = ["block", "challenge", "observe", "trusted"];
+  const RULE_NAMES = [null, "injected_input", "untrusted_events"];
   const FEATURE_NAMES = [
     "event_count",
     "move_count",
@@ -41,6 +42,7 @@
 
   let engine = null;
   const pending = [];
+  let pendingNativeInjected = 0;
 
   // 실제 키 값은 기록하지 않고 범주만 남긴다.
   function keyCategory(e) {
@@ -75,9 +77,20 @@
       ex.guard_push(pending[i], pending[i + 1], pending[i + 2], pending[i + 3], pending[i + 4], pending[i + 5]);
     }
     pending.length = 0;
+    if (pendingNativeInjected > 0) ex.guard_native_injected(pendingNativeInjected);
+    pendingNativeInjected = 0;
     engine = ex;
     engine.guard_tick();
     setInterval(() => engine.guard_tick(), TICK_MS);
+  }
+
+  // 브라우저 셸(main.rs)이 webview.eval()로 주기적으로 호출한다.
+  // 페이지 스크립트도 호출할 수 있지만, 자기 점수를 낮추는 것 외에는 할 수 있는 일이 없다.
+  // TODO(Phase 4): 페이지가 호출할 수 없는 인증된 채널(WebView2 host object 등)로 교체
+  function reportNativeInjected(count) {
+    if (!Number.isInteger(count) || count <= 0 || count > 1_000_000) return;
+    if (engine) engine.guard_native_injected(count);
+    else pendingNativeInjected = Math.min(pendingNativeInjected + count, 1_000_000);
   }
 
   const opts = { passive: true, capture: true };
@@ -103,6 +116,7 @@
   const api = {
     version: 1,
     ready: () => engine !== null,
+    reportNativeInjected,
     // TODO(Phase 3): WASM 엔진 점수 + 네이티브 서명으로 실제 토큰 발급
     getToken: async (_nonce) => {
       throw new Error("guard token issuance is not implemented yet");
@@ -116,6 +130,7 @@
       return {
         score: engine.guard_score(),
         tier: TIER_NAMES[tier] ?? "unknown",
+        rule: RULE_NAMES[engine.guard_rule()] ?? null,
         sufficientEvidence: engine.guard_sufficient_evidence() === 1,
         droppedEvents: engine.guard_dropped_events(),
         features: Object.fromEntries(FEATURE_NAMES.map((name, i) => [name, engine.guard_feature(i)])),

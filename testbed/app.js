@@ -64,6 +64,10 @@ bookBtn.addEventListener("click", async () => {
 // __GUARD__.debug()는 개발용 호스트(localhost)에서만 제공된다.
 
 const TIER_LABELS = { trusted: "신뢰", observe: "관찰", challenge: "확인", block: "차단" };
+const RULE_LABELS = {
+  injected_input: "규칙: OS 수준 주입 입력 감지",
+  untrusted_events: "규칙: 스크립트 생성 이벤트 감지",
+};
 const SHOWN_FEATURES = {
   event_count: "이벤트 수",
   move_count: "마우스 이동",
@@ -78,6 +82,7 @@ const SHOWN_FEATURES = {
 const debugEl = document.getElementById("debug");
 const scoreEl = document.getElementById("score");
 const tierEl = document.getElementById("tier");
+const ruleEl = document.getElementById("rule");
 const meterEl = document.getElementById("meter-fill");
 const featuresEl = document.getElementById("features");
 
@@ -99,6 +104,7 @@ function renderDebug() {
   scoreEl.textContent = d.score;
   tierEl.dataset.tier = d.tier;
   tierEl.textContent = TIER_LABELS[d.tier] ?? d.tier;
+  ruleEl.textContent = d.rule ? RULE_LABELS[d.rule] ?? d.rule : "";
   meterEl.style.width = `${d.score}%`;
   for (const [key, cell] of Object.entries(featureCells)) {
     const v = d.features[key];
