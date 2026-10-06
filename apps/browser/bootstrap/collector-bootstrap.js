@@ -19,7 +19,8 @@
   const FLAG_COALESCED = 1 << 2;
   const KEY = { other: 0, letter: 1, digit: 2, modifier: 3, navigation: 4, function: 5, whitespace: 6 };
   const TIER_NAMES = ["block", "challenge", "observe", "trusted"];
-  const RULE_NAMES = [null, "injected_input", "untrusted_events"];
+  const RULE_NAMES = [null, "injected_input", "untrusted_events", "native_mismatch"];
+  const POINTER = { mouse: 0, pen: 1, touch: 2 };
   const FEATURE_NAMES = [
     "event_count",
     "move_count",
@@ -31,6 +32,7 @@
     "key_dwell_std_ms",
     "untrusted_ratio",
     "injected_count",
+    "native_mismatch_count",
   ];
 
   // 점수 갱신 주기. 예매 클릭 시에는 새로 계산하지 않고 마지막 값을 쓴다.
@@ -42,7 +44,7 @@
 
   let engine = null;
   const pending = [];
-  let pendingNativeInjected = 0;
+
 
   // 실제 키 값은 기록하지 않고 범주만 남긴다.
   function keyCategory(e) {
@@ -77,20 +79,26 @@
       ex.guard_push(pending[i], pending[i + 1], pending[i + 2], pending[i + 3], pending[i + 4], pending[i + 5]);
     }
     pending.length = 0;
-    if (pendingNativeInjected > 0) ex.guard_native_injected(pendingNativeInjected);
-    pendingNativeInjected = 0;
     engine = ex;
     engine.guard_tick();
     setInterval(() => engine.guard_tick(), TICK_MS);
   }
 
-  // 브라우저 셸(main.rs)이 webview.eval()로 주기적으로 호출한다.
+  // 브라우저 셸(main.rs)이 webview.eval()로 주기적으로(200ms) 호출한다.
+  // - injected: OS 수준 주입 입력 수
+  // - nativeMoves: OS 입력 훅이 본 실제 마우스 이동 수 (DOM 이동과 비교해 불일치 탐지)
+  // 엔진 로드 전 보고는 버린다. 불일치 비교는 같은 구간의 DOM 이벤트가 있어야 의미가 있다.
   // 페이지 스크립트도 호출할 수 있지만, 자기 점수를 낮추는 것 외에는 할 수 있는 일이 없다.
   // TODO(Phase 4): 페이지가 호출할 수 없는 인증된 채널(WebView2 host object 등)로 교체
-  function reportNativeInjected(count) {
-    if (!Number.isInteger(count) || count <= 0 || count > 1_000_000) return;
-    if (engine) engine.guard_native_injected(count);
-    else pendingNativeInjected = Math.min(pendingNativeInjected + count, 1_000_000);
+  const MAX_REPORT = 1_000_000;
+  function reportNative(injected, nativeMoves) {
+    const valid = (n) => Number.isInteger(n) && n >= 0 && n <= MAX_REPORT;
+    if (!engine || !valid(injected) || !valid(nativeMoves)) return;
+    engine.guard_native_report(injected, nativeMoves);
+  }
+
+  function pointerType(e) {
+    return POINTER[e.pointerType] ?? POINTER.mouse;
   }
 
   const opts = { passive: true, capture: true };
@@ -98,9 +106,9 @@
   addEventListener("pointermove", (e) => {
     const samples = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
     if (samples.length > 1) {
-      for (const s of samples) record(KIND.move, s, s.clientX, s.clientY, 0, FLAG_COALESCED);
+      for (const s of samples) record(KIND.move, s, s.clientX, s.clientY, pointerType(e), FLAG_COALESCED);
     } else {
-      record(KIND.move, e, e.clientX, e.clientY, 0);
+      record(KIND.move, e, e.clientX, e.clientY, pointerType(e));
     }
   }, opts);
   addEventListener("pointerdown", (e) => record(KIND.down, e, e.clientX, e.clientY, e.button), opts);
@@ -116,7 +124,7 @@
   const api = {
     version: 1,
     ready: () => engine !== null,
-    reportNativeInjected,
+    reportNative,
     // TODO(Phase 3): WASM 엔진 점수 + 네이티브 서명으로 실제 토큰 발급
     getToken: async (_nonce) => {
       throw new Error("guard token issuance is not implemented yet");

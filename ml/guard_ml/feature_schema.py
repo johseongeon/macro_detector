@@ -15,6 +15,7 @@ FEATURE_NAMES: list[str] = [
     "key_dwell_std_ms",
     "untrusted_ratio",
     "injected_count",
+    "native_mismatch_count",
 ]
 
 FEATURE_COUNT = len(FEATURE_NAMES)

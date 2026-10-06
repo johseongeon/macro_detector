@@ -67,6 +67,7 @@ const TIER_LABELS = { trusted: "신뢰", observe: "관찰", challenge: "확인",
 const RULE_LABELS = {
   injected_input: "규칙: OS 수준 주입 입력 감지",
   untrusted_events: "규칙: 스크립트 생성 이벤트 감지",
+  native_mismatch: "규칙: OS 입력 없는 마우스 이동 감지",
 };
 const SHOWN_FEATURES = {
   event_count: "이벤트 수",
@@ -77,6 +78,7 @@ const SHOWN_FEATURES = {
   key_dwell_mean_ms: "키 누름 평균 (ms)",
   untrusted_ratio: "비신뢰 이벤트 비율",
   injected_count: "주입 입력 수",
+  native_mismatch_count: "OS–DOM 불일치 구간",
 };
 
 const debugEl = document.getElementById("debug");

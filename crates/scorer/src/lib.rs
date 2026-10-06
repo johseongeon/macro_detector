@@ -185,6 +185,19 @@ mod tests {
     }
 
     #[test]
+    fn native_mismatch_only_challenges() {
+        let s = Scorer::default();
+        assert_eq!(
+            s.score(&fv_with(idx::NATIVE_MISMATCH_COUNT, 2.0), true)
+                .hard_rule,
+            None
+        );
+        let v = s.score(&fv_with(idx::NATIVE_MISMATCH_COUNT, 3.0), true);
+        assert_eq!(v.tier, Tier::Challenge);
+        assert_eq!(v.hard_rule, Some(HardRule::NativeMismatch));
+    }
+
+    #[test]
     fn untrusted_rule_wins_over_injected() {
         let mut fv = fv_with(idx::EVENT_COUNT, 100.0);
         fv.0[idx::UNTRUSTED_RATIO] = 0.9;

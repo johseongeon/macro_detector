@@ -34,10 +34,10 @@ function loadPage(hostname = "localhost") {
   let t = 0;
   return {
     guard: () => ctx.__GUARD__,
-    move: (n, isTrusted = true) => {
+    move: (n, isTrusted = true, pointerType = "mouse") => {
       for (let i = 0; i < n; i++) {
         t += 8;
-        listeners.pointermove({ isTrusted, timeStamp: t, clientX: i * 3, clientY: 100 });
+        listeners.pointermove({ isTrusted, pointerType, timeStamp: t, clientX: i * 3, clientY: 100 });
       }
     },
     tick: () => intervals.forEach((fn) => fn()),
@@ -80,19 +80,55 @@ test("untrusted (script-generated) events trigger the hard rule", async () => {
 
 test("native injected reports challenge but never block", async () => {
   const page = loadPage();
-  page.guard().reportNativeInjected(2); // 엔진 로드 전 보고도 보존
   await ready(page);
-  page.guard().reportNativeInjected(3);
-  page.guard().reportNativeInjected(-1); // 잘못된 값은 무시
-  page.guard().reportNativeInjected(1.5);
   page.move(10);
+  page.guard().reportNative(3, 10);
+  page.guard().reportNative(-1, 10); // 잘못된 값은 무시
+  page.guard().reportNative(1.5, 10);
+  page.guard().reportNative(2, 5);
   page.tick();
 
   const d = page.guard().debug();
   assert.equal(d.features.injected_count, 5);
+  assert.equal(d.features.native_mismatch_count, 0);
   assert.equal(d.tier, "challenge");
   assert.equal(d.rule, "injected_input");
   assert.equal(d.score, 49);
+});
+
+test("trusted mouse moves the OS never saw are flagged as native mismatch", async () => {
+  const page = loadPage();
+  await ready(page);
+  page.guard().reportNative(0, 0); // 기준 구간
+  for (let i = 0; i < 3; i++) {
+    page.move(10);
+    page.guard().reportNative(0, 0);
+  }
+  page.tick();
+
+  const d = page.guard().debug();
+  assert.equal(d.features.native_mismatch_count, 3);
+  assert.equal(d.tier, "challenge");
+  assert.equal(d.rule, "native_mismatch");
+});
+
+test("touch moves and moves the OS saw are not mismatches", async () => {
+  const page = loadPage();
+  await ready(page);
+  page.guard().reportNative(0, 0);
+  for (let i = 0; i < 3; i++) {
+    page.move(10, true, "touch");
+    page.guard().reportNative(0, 0);
+  }
+  for (let i = 0; i < 3; i++) {
+    page.move(10);
+    page.guard().reportNative(0, 12);
+  }
+  page.tick();
+
+  const d = page.guard().debug();
+  assert.equal(d.features.native_mismatch_count, 0);
+  assert.equal(d.rule, null);
 });
 
 test("does nothing on hosts outside the allowlist", () => {

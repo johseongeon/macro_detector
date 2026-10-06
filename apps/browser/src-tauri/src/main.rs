@@ -44,17 +44,19 @@ fn main() {
             .build()?;
 
             // 네이티브 입력 감시 결과를 주기적으로 페이지 수집기(collector-bootstrap.js)에 전달한다.
+            // 불일치 탐지를 위해 값이 0이어도 매 구간 보고한다. 훅이 동작하지 않으면 보고하지 않는다.
             // 수집기가 없는 페이지(허용 목록 밖)에서는 호출이 무시된다.
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(NATIVE_REPORT_INTERVAL);
-                // 수집기는 100만을 넘는 보고를 무시하므로 상한을 맞춘다.
-                let injected = input_guard::take_injected().min(1_000_000);
-                if injected == 0 {
+                if !input_guard::is_active() {
                     continue;
                 }
+                // 수집기는 100만을 넘는 보고를 무시하므로 상한을 맞춘다.
+                let (injected, moves) = input_guard::take_report();
+                let (injected, moves) = (injected.min(1_000_000), moves.min(1_000_000));
                 if let Some(window) = handle.get_webview_window("main") {
-                    let script = format!("window.__GUARD__?.reportNativeInjected?.({injected});");
+                    let script = format!("window.__GUARD__?.reportNative?.({injected}, {moves});");
                     let _ = window.eval(&script);
                 }
             });

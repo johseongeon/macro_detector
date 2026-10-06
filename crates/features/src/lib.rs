@@ -7,7 +7,7 @@ mod stats;
 
 pub use stats::RunningStats;
 
-use guard_collector::{EventKind, EventRecord};
+use guard_collector::{flags, EventKind, EventRecord, PointerType};
 
 /// 특징 벡터의 인덱스. 순서를 바꾸면 모델을 다시 학습해야 한다.
 pub mod idx {
@@ -21,9 +21,10 @@ pub mod idx {
     pub const KEY_DWELL_STD_MS: usize = 7;
     pub const UNTRUSTED_RATIO: usize = 8;
     pub const INJECTED_COUNT: usize = 9;
+    pub const NATIVE_MISMATCH_COUNT: usize = 10;
 }
 
-pub const FEATURE_COUNT: usize = 10;
+pub const FEATURE_COUNT: usize = 11;
 
 pub const FEATURE_NAMES: [&str; FEATURE_COUNT] = [
     "event_count",
@@ -36,11 +37,16 @@ pub const FEATURE_NAMES: [&str; FEATURE_COUNT] = [
     "key_dwell_std_ms",
     "untrusted_ratio",
     "injected_count",
+    "native_mismatch_count",
 ];
 
 /// 낮은 점수를 내리기 위한 최소 마우스 이동 이벤트 수.
 /// 증거가 부족한 상태에서 판정하면 오판이 늘어나므로, 이 값 미만이면 '관찰'로만 둔다.
 pub const MIN_MOVES_FOR_VERDICT: u64 = 300;
+
+/// Native–DOM 불일치로 세려면 한 보고 구간에 필요한 최소 DOM 마우스 이동 수.
+/// 스크롤·레이아웃 변경 후 브라우저가 만드는 소수의 합성 이동은 무시한다.
+pub const MIN_DOM_MOVES_FOR_MISMATCH: u64 = 5;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FeatureVector(pub [f32; FEATURE_COUNT]);
@@ -70,6 +76,12 @@ pub struct FeatureExtractor {
     // 개인정보를 해치지 않는 키 식별 방식(세션 단위 임시 ID 등)을 검토.
     key_down_us: [Option<u64>; KEY_SLOTS],
     key_dwell: RunningStats,
+
+    /// 마지막 네이티브 보고 이후 들어온 신뢰된 마우스 이동 수.
+    dom_mouse_moves_since_report: u64,
+    /// 직전 보고의 네이티브 마우스 이동 수. 첫 보고 전에는 `None`.
+    prev_native_moves: Option<u64>,
+    native_mismatch_count: u64,
 }
 
 impl FeatureExtractor {
@@ -110,6 +122,14 @@ impl FeatureExtractor {
     }
 
     fn on_move(&mut self, e: &EventRecord) {
+        // 터치·펜은 마우스 훅을 거치지 않으므로 Native–DOM 비교에서 제외한다.
+        if e.is_trusted()
+            && e.extra == PointerType::Mouse as u16
+            && e.flags & flags::NATIVE_INJECTED == 0
+        {
+            self.dom_mouse_moves_since_report += 1;
+        }
+
         if let Some((t, x, y)) = self.last_move {
             let dt_ms = us_to_ms(e.t_us.saturating_sub(t));
             if dt_ms > 0.0 {
@@ -133,10 +153,26 @@ impl FeatureExtractor {
         self.speed.count() + self.last_move.is_some() as u64
     }
 
-    /// 네이티브 입력 감시가 보고한 주입 입력 수를 더한다.
-    /// 네이티브 계층은 DOM 이벤트와 1:1로 대응되지 않으므로 개수만 합산한다.
-    pub fn record_native_injected(&mut self, count: u64) {
-        self.injected_count = self.injected_count.saturating_add(count);
+    /// 네이티브 입력 감시의 주기 보고를 반영한다.
+    ///
+    /// - `injected`: 주입 플래그가 붙은 입력 수. 개수만 합산한다(DOM 이벤트와 1:1 대응이 없다).
+    /// - `native_moves`: OS 입력 훅이 본 실제 마우스 이동 수(시스템 전체).
+    ///
+    /// DOM에는 신뢰된 마우스 이동이 들어왔는데 OS 훅은 이번과 직전 구간 모두 마우스 이동을
+    /// 보지 못했다면, 하드웨어를 거치지 않은 입력(`SetCursorPos`, DevTools 프로토콜 등)이다.
+    /// 보고 주기 경계에서 생기는 어긋남에 걸리지 않도록 두 구간 연속을 요구한다.
+    ///
+    /// 호출 전에 해당 구간의 이벤트를 모두 `update()`로 반영해 두어야 한다.
+    pub fn record_native_report(&mut self, injected: u64, native_moves: u64) {
+        self.injected_count = self.injected_count.saturating_add(injected);
+        if self.dom_mouse_moves_since_report >= MIN_DOM_MOVES_FOR_MISMATCH
+            && native_moves == 0
+            && self.prev_native_moves == Some(0)
+        {
+            self.native_mismatch_count += 1;
+        }
+        self.prev_native_moves = Some(native_moves);
+        self.dom_mouse_moves_since_report = 0;
     }
 
     pub fn has_sufficient_evidence(&self) -> bool {
@@ -159,6 +195,7 @@ impl FeatureExtractor {
             self.untrusted_count as f32 / self.event_count as f32
         };
         v[idx::INJECTED_COUNT] = self.injected_count as f32;
+        v[idx::NATIVE_MISMATCH_COUNT] = self.native_mismatch_count as f32;
         FeatureVector(v)
     }
 }
@@ -227,11 +264,76 @@ mod tests {
         assert!(!fx.has_sufficient_evidence());
     }
 
+    fn moves(fx: &mut FeatureExtractor, n: u64, pointer: PointerType, fl: u8) {
+        for i in 0..n {
+            fx.update(&EventRecord::new(
+                EventKind::PointerMove,
+                i * 8000,
+                i as f32,
+                0.0,
+                fl,
+                pointer as u16,
+            ));
+        }
+    }
+
+    fn mismatch(fx: &FeatureExtractor) -> f32 {
+        fx.snapshot().0[idx::NATIVE_MISMATCH_COUNT]
+    }
+
+    #[test]
+    fn detects_dom_moves_without_native_input() {
+        let mut fx = FeatureExtractor::new();
+        fx.record_native_report(0, 0); // 기준 구간
+        for _ in 0..3 {
+            moves(&mut fx, 10, PointerType::Mouse, flags::TRUSTED);
+            fx.record_native_report(0, 0);
+        }
+        assert_eq!(mismatch(&fx), 3.0);
+    }
+
+    #[test]
+    fn no_mismatch_when_native_saw_moves() {
+        let mut fx = FeatureExtractor::new();
+        fx.record_native_report(0, 0);
+        // 구간 경계 어긋남: 직전 구간에는 네이티브 이동이 있었다
+        moves(&mut fx, 10, PointerType::Mouse, flags::TRUSTED);
+        fx.record_native_report(0, 12);
+        moves(&mut fx, 10, PointerType::Mouse, flags::TRUSTED);
+        fx.record_native_report(0, 0);
+        // 첫 보고 전(기준 없음)
+        let mut fresh = FeatureExtractor::new();
+        moves(&mut fresh, 10, PointerType::Mouse, flags::TRUSTED);
+        fresh.record_native_report(0, 0);
+        assert_eq!(mismatch(&fx), 0.0);
+        assert_eq!(mismatch(&fresh), 0.0);
+    }
+
+    #[test]
+    fn ignores_touch_pen_untrusted_and_few_moves() {
+        let mut fx = FeatureExtractor::new();
+        fx.record_native_report(0, 0);
+        moves(&mut fx, 20, PointerType::Touch, flags::TRUSTED);
+        fx.record_native_report(0, 0);
+        moves(&mut fx, 20, PointerType::Pen, flags::TRUSTED);
+        fx.record_native_report(0, 0);
+        moves(&mut fx, 20, PointerType::Mouse, 0);
+        fx.record_native_report(0, 0);
+        moves(
+            &mut fx,
+            MIN_DOM_MOVES_FOR_MISMATCH - 1,
+            PointerType::Mouse,
+            flags::TRUSTED,
+        );
+        fx.record_native_report(0, 0);
+        assert_eq!(mismatch(&fx), 0.0);
+    }
+
     #[test]
     fn adds_native_injected_reports() {
         let mut fx = FeatureExtractor::new();
-        fx.record_native_injected(4);
-        fx.record_native_injected(u64::MAX);
+        fx.record_native_report(4, 10);
+        fx.record_native_report(u64::MAX, 10);
         let v = fx.snapshot();
         assert_eq!(v.0[idx::INJECTED_COUNT], u64::MAX as f32);
         assert_eq!(v.0[idx::EVENT_COUNT], 0.0);

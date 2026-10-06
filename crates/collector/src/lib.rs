@@ -62,10 +62,20 @@ pub enum KeyCategory {
     Whitespace = 6,
 }
 
+/// 포인터 종류. `PointerMove` 레코드의 `extra`에 담는다.
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PointerType {
+    Mouse = 0,
+    Pen = 1,
+    Touch = 2,
+}
+
 /// 고정 크기(24바이트) 이벤트 레코드.
 ///
 /// `extra`의 의미는 이벤트 종류에 따라 다르다.
-/// - Pointer: 버튼 번호
+/// - PointerMove: [`PointerType`]
+/// - PointerDown / PointerUp: 버튼 번호
 /// - Key: [`KeyCategory`]
 /// - Wheel: delta 부호/크기 버킷
 #[repr(C)]

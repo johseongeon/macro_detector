@@ -49,10 +49,14 @@ impl Engine {
         }
     }
 
-    /// 쌓인 이벤트를 처리하고 점수를 갱신한다.
-    pub fn tick(&mut self) -> Verdict {
+    fn drain(&mut self) {
         let extractor = &mut self.extractor;
         self.ring.drain(|e| extractor.update(e));
+    }
+
+    /// 쌓인 이벤트를 처리하고 점수를 갱신한다.
+    pub fn tick(&mut self) -> Verdict {
+        self.drain();
         self.features = self.extractor.snapshot();
         self.verdict = self
             .scorer
@@ -60,9 +64,11 @@ impl Engine {
         self.verdict
     }
 
-    /// 네이티브 입력 감시가 보고한 주입 입력 수. 다음 `tick()`에 반영된다.
-    pub fn record_native_injected(&mut self, count: u64) {
-        self.extractor.record_native_injected(count);
+    /// 네이티브 입력 감시의 주기 보고. 다음 `tick()`의 점수에 반영된다.
+    /// 이번 구간의 DOM 이벤트와 비교해야 하므로, 쌓인 이벤트를 먼저 처리한다.
+    pub fn record_native_report(&mut self, injected: u64, native_moves: u64) {
+        self.drain();
+        self.extractor.record_native_report(injected, native_moves);
     }
 
     pub fn verdict(&self) -> Verdict {
@@ -124,16 +130,16 @@ pub extern "C" fn guard_tier() -> u32 {
     with_engine(|e| e.verdict().tier as u32)
 }
 
-/// 걸린 Stage 1 규칙 (0=없음, 1=주입 입력, 2=비신뢰 이벤트).
+/// 걸린 Stage 1 규칙 (0=없음, 1=주입 입력, 2=비신뢰 이벤트, 3=Native–DOM 불일치).
 #[no_mangle]
 pub extern "C" fn guard_rule() -> u32 {
     with_engine(|e| e.verdict().hard_rule.map_or(0, |r| r as u32))
 }
 
-/// 브라우저 셸의 네이티브 입력 감시가 보고한 주입 입력 수를 더한다.
+/// 브라우저 셸의 네이티브 입력 감시 주기 보고 (주입 입력 수, OS 훅이 본 마우스 이동 수).
 #[no_mangle]
-pub extern "C" fn guard_native_injected(count: u32) {
-    with_engine(|e| e.record_native_injected(count as u64));
+pub extern "C" fn guard_native_report(injected: u32, native_moves: u32) {
+    with_engine(|e| e.record_native_report(injected as u64, native_moves as u64));
 }
 
 #[no_mangle]
@@ -181,10 +187,35 @@ mod tests {
     #[test]
     fn native_report_challenges_after_tick() {
         let mut e = Engine::new();
-        e.record_native_injected(3);
+        e.record_native_report(3, 10);
         let v = e.tick();
         assert_eq!(v.tier, Tier::Challenge);
         assert_eq!(e.features().0[idx::INJECTED_COUNT], 3.0);
+    }
+
+    #[test]
+    fn report_compares_against_events_pushed_before_it() {
+        let mut e = Engine::new();
+        e.record_native_report(0, 0);
+        for round in 0..3u64 {
+            for i in 0..10u64 {
+                // tick() 없이 push만 한 이벤트도 보고 시점에 비교되어야 한다
+                let t = (round * 10 + i) * 8000;
+                e.push(
+                    EventKind::PointerMove as u8,
+                    flags::TRUSTED,
+                    t,
+                    i as f32,
+                    0.0,
+                    0,
+                );
+            }
+            e.record_native_report(0, 0);
+        }
+        let v = e.tick();
+        assert_eq!(e.features().0[idx::NATIVE_MISMATCH_COUNT], 3.0);
+        assert_eq!(v.tier, Tier::Challenge);
+        assert_eq!(v.hard_rule, Some(guard_scorer::HardRule::NativeMismatch));
     }
 
     #[test]
@@ -221,7 +252,7 @@ mod tests {
     #[test]
     fn c_abi_native_injected() {
         assert_eq!(guard_rule(), 0);
-        guard_native_injected(2);
+        guard_native_report(2, 10);
         guard_tick();
         assert_eq!(guard_tier(), Tier::Challenge as u32);
         assert_eq!(guard_rule(), 1);
